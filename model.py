@@ -54,16 +54,21 @@ model = Sequential([
 	
 	# Activation ELU better than ReLU?
 	# (without activation layer, the linear result of previous layer is used. "linear" activation: a(x) = x)
-	Activation( ELU(alpha=1.0) ),
+	# Advanced activation layers are not activation functions. https://github.com/fchollet/keras/issues/2272
+	# model.add(LeakyReLU(params['a'])) not model.add(Activation(LeakyReLU(params['a'])))
+	ELU(alpha=1.0),
 	
 	# layer 2: filters 36, kernel 5x5, stride (subsample) 2x2, activation ELU
-	Convolution2D(36, 5, 5, border_mode='valid', subsample=(2,2), activation=ELU(alpha=1.0) ),
+	Convolution2D(36, 5, 5, border_mode='valid', subsample=(2,2) ),
+	ELU(alpha=1.0),
 	
 	# layer 3: filters 48, kernel 5x5, stride (subsample) 2x2, activation ELU
-	Convolution2D(48, 5, 5, border_mode='valid', subsample=(2,2), activation=ELU(alpha=1.0)),
+	Convolution2D(48, 5, 5, border_mode='valid', subsample=(2,2)),
+	ELU(alpha=1.0),
 
 	# layer 4: filters 64, kernel 3x3, activation ELU
-	Convolution2D(64, 3, 3, border_mode='valid', activation=ELU(alpha=1.0)),
+	Convolution2D(64, 3, 3, border_mode='valid'),
+	ELU(alpha=1.0),
 	
 	# layer 5: filters 64, kernel 3x3, activation ELU
 	# Convolution2D(64, 3, 3, border_mode='valid', activation=ELU(alpha=1.0)),
@@ -73,13 +78,16 @@ model = Sequential([
 	Flatten(),
 	
 	# Fully-connected layer 1
-	# Dense(100, activation=ELU(alpha=1.0)),
+	# Dense(100),
+	# ELU(alpha=1.0),
 	
 	# Fully-connected layer 2
-	Dense(50, activation=ELU(alpha=1.0)),
+	Dense(50),
+	ELU(alpha=1.0),
 	
 	# Fully-connected layer 3
-	Dense(10, activation=ELU(alpha=1.0)),
+	Dense(10),
+	ELU(alpha=1.0),
 	
 	Dense(1)
 	
@@ -126,6 +134,11 @@ samples.pop(0)
 from sklearn.model_selection import train_test_split
 train_samples, validation_samples = train_test_split(samples, test_size=0.2, random_state=88)
 
+# image plot library
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+%matplotlib
+
 import cv2
 import numpy as np
 import sklearn
@@ -167,14 +180,26 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/'):
 train_generator = generator(train_samples, batch_size=32)
 validation_generator = generator(validation_samples, batch_size=32)
 
-
-model.fit_generator(train_generator, samples_per_epoch=len(train_samples), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=1)
-
-# K.resize_images(x, 64, 64, dim_ordering='tf')
+history = model.fit_generator(train_generator, 
+	samples_per_epoch=len(train_samples), 
+	validation_data=validation_generator, 
+	nb_val_samples=len(validation_samples), 
+	nb_epoch=10)
+	
+#
+# plot history for loss
+#
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
 
 # train the model, iterating on the data in batches
 # of 32 samples
 ### model.fit(data, labels, nb_epoch=10, batch_size=128)
 
 # Save your trained model architecture as model.h5 using model.save('model.h5').
-### model.save('model.h5')
+model.save('model.h5')
