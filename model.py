@@ -1,5 +1,13 @@
+#
+# Behavioral Cloning Project
+#
 # input images shape (64,64,3) width, height, channels
 # output 1 value steering angle
+#
+# Usage: python model.py
+#
+# Saves resulting model into file 'model.h5'
+#
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Lambda, Convolution2D, Cropping2D
@@ -11,36 +19,22 @@ from keras import backend as K
 # Model Definition
 #
 
-# model = Sequential([
-#     Dense(32, input_dim=784, init='uniform'),
-#     Activation('elu'),
-#     Dense(10),
-#     Activation('softmax'),
-# ])
-
-# NVIDIA model
+# Uses NVIDIA model as the starting reference, but simplified down as input image dimensions used are 64x64 not 66x200
 model = Sequential([
 	# Add image preprocessing layers in model means preprocessing doesn't have to be done prior to 
 	# feeding data to model.
-	# Such would be the case of running drive.py
 	
-	# Preprocessing includes
+	# Preprocessing can include:
 	# - cropping images to remove upper horizontal band above horizon (road) and lower horizontal band that includes the hood of car
 	# - resize image to reduce number of parameters
 	# - normalize image data
 	
+	# NOTE: we could crop images in the model with Keras layer Cropping2D,
+	# but we also want to resize images which is more compute intensize,
+	# so cropping and resizing is done before the model,
+	# this means corresponding image preprocessing has to be done when feeding the simulator (drive.py) as well
 	# Crop image: remove 64 pixels from top and 36 pixels from the bottom.
-	# should precalculate before model to reduce computation load?
-	# output shape (64, 320, 3)
-	# Cropping2D( cropping=( (60,36), (0,0) ), input_shape=(160,320,3) ),
-	
-	# Resize images contained in a 4D tensor of shape [batch, height, width, channels] (for 'tf' dim_ordering) 
-	# this doesn't deal with dimensions correctly, should precalculate before model to reduce computation load anyways?
-	#Lambda(lambda x: K.resize_images(x, 64, 64, dim_ordering='tf')),
-	
-	# # Scale to range with magnitude of 1.0 and Normalize to mean of zero
-	# # resulting range -0.5 to 0.5
-	# Lambda(lambda x: (x / 255.0) - 0.5, input_shape=(64,64,3)),
+	# Cropping2D( cropping=( (60,36), (0,0) ) ),
 	
 	# Scale to range with magnitude of 2.0 and Normalize to mean of zero
 	# resulting range -1.0 to 1.0
@@ -50,7 +44,7 @@ model = Sequential([
 	Convolution2D(24, 5, 5, border_mode='valid', input_shape=(64, 64, 3), subsample=(2,2)),
 	
 	# Use drop out if there is overfitting
-	# model.add(Dropout(fractional value)), NOTE: need to be able to remove drop out when doing prediction
+	# model.add(Dropout( 0.2 )),
 	
 	# Activation ELU better than ReLU?
 	# (without activation layer, the linear result of previous layer is used. "linear" activation: a(x) = x)
@@ -71,6 +65,7 @@ model = Sequential([
 	ELU(alpha=1.0),
 	
 	# layer 5: filters 64, kernel 3x3, activation ELU
+	# NOTE: this layer reduced dimensions down to 1x1, didn't seem necessary
 	# Convolution2D(64, 3, 3, border_mode='valid', activation=ELU(alpha=1.0)),
 	
 	# Flatten
@@ -78,6 +73,8 @@ model = Sequential([
 	Flatten(),
 	
 	# Fully-connected layer 1
+	# NOTE: having a fully connected layer > 64 would expand dimensions not reduce it as is usual with Convolutional Networks
+	#   so this layer was removed
 	# Dense(100),
 	# ELU(alpha=1.0),
 	
@@ -90,7 +87,6 @@ model = Sequential([
 	ELU(alpha=1.0),
 	
 	Dense(1)
-	
 ])
 
 print ("Model defined")
@@ -99,10 +95,11 @@ print ("Model defined")
 # Model Compilation
 #
 
+# Optimizer: Adam https://arxiv.org/abs/1412.6980v8
+# Configure for a mean squared error regression problem
 learning_rate = 0.001
-# for a mean squared error regression problem
 adam = Adam(lr = learning_rate)
-model.compile(optimizer = adam, loss = 'mean_squared_error', metrics=['mean_absolute_percentage_error'])
+model.compile(optimizer = adam, loss = 'mean_squared_error', metrics=['accuracy'])
 
 print ("Model compiled")
 
@@ -182,6 +179,13 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
                 images.append( np.asarray( center_image ) )
                 angles.append(center_angle)
                 
+                # flip center image vertically
+                if flip:
+                    image_flipped = np.fliplr(center_image)
+                    angle_flipped = -center_angle
+                    images.append( np.asarray( image_flipped ) )
+                    angles.append( angle_flipped )      
+                              
                 # add in left and right images
                 if left_right:
                     # left image, adjust angle to center
@@ -196,12 +200,17 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
                     images.append( np.asarray( right_image ) )
                     angles.append( right_angle )
                     
-                # flip image vertically
-                if flip:
-                    image_flipped = np.fliplr(center_image)
-                    angle_flipped = -center_angle
-                    images.append( np.asarray( image_flipped ) )
-                    angles.append( angle_flipped )
+                    # flip left and right images
+                    if flip:
+                        image_flipped = np.fliplr(left_image)
+                        angle_flipped = -left_angle
+                        images.append( np.asarray( image_flipped ) )
+                        angles.append( angle_flipped )
+                        
+                        image_flipped = np.fliplr(right_image)
+                        angle_flipped = -right_angle
+                        images.append( np.asarray( image_flipped ) )
+                        angles.append( angle_flipped )
                 
             X_train = np.array(images)
             y_train = np.array(angles)
@@ -228,19 +237,15 @@ validation_generator = generator(validation_samples, batch_size=128, flip=True, 
 
 print("Start training ...")
 
-# *2 to add flipped images
+# augmentation_factor to add augmented images including flipped and left/right images
+augmentation_factor = 6
+epochs = 8
+
 history = model.fit_generator(train_generator, 
-    samples_per_epoch=len(train_samples)*4, 
+    samples_per_epoch=len(train_samples)*augmentation_factor, 
     validation_data=validation_generator, 
-    nb_val_samples=len(validation_samples)*4, 
-    nb_epoch=6)
-    
-# center only
-# history = model.fit_generator(train_generator, 
-#     samples_per_epoch=len(train_samples), 
-#     validation_data=validation_generator, 
-#     nb_val_samples=len(validation_samples), 
-#     nb_epoch=5)
+    nb_val_samples=len(validation_samples)*augmentation_factor, 
+    nb_epoch=epochs)
 	
 #
 # plot history for loss
@@ -251,7 +256,7 @@ plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
-# plt.show()
+plt.draw()
 
 # train the model, iterating on the data in batches
 # of 32 samples
@@ -261,3 +266,4 @@ plt.legend(['train', 'test'], loc='upper left')
 model.save('model.h5')
 
 print('model saved')
+plt.show()
