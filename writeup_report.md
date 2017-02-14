@@ -37,22 +37,64 @@ The starting point used for the model architecture is the network described in t
 [End to End Learning for Self-Driving Cars](http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf)
 
 The Nvidia model takes input images of dimensional shape (66, 200, 3). Nvidia uses 3 input channels coded in YUV format.
+Surprisingly, the Nvidia model does not use pooling or dropout layers, and we follow suit to start with.
 
 We have observed that there is a top and bottom horizontal band that can be cropped without losing driving information.
 In addition, there is a broad road surface area that doesn't provide much feature information,
 it is the road edge feature information that is relevant.
 It appears that the simulator image can thus be reduced in width without greatly affecting relevant input information.
 With cropping and resizing of width, input images with dimensional shape (64, 64, 3) seems reasonable.
+The much smaller input image size affects the resulting architecture.
 
-The much smaller input image size affects the resulting architecture:
+The Nvidia model has 5 convolutional layers. 
+With 5 convolutional layers for input image dimensions of 64x64 and the kernel and stride configurations used,
+the fifth layer output dimension would be 1x1. This seems degenerate, so the fifth layer is dropped.
 
-* remove 1 convolutional layer
-* remove 1 fully connected layer
+The Nvidia model has 3 fully connected layers.
+The flattened layer has 1164 elements, whereas the model used has a flattened layer of 576 elements,
+so it seems reasonable to drop the fully connected layer with 100 elements, and going straight to the 50 element layer.
+
+The reduced image input size means much fewer parameters need to be trained,
+resulting in shorter training cycles and allows more experimentation on the model.
+
+The resulting model architecture is shown in the model below:
 
 ![Model Architecture](./model.png)
 
+### Model Configuration (Compilation)
+
+Optimizer used: [Adam (adaptive moment estimation)](https://arxiv.org/abs/1412.6980v8)
+Adam "computes individual adaptive learning rates for different parameters from estimates of first and second moments of the gradients"
+Adam optimizer default parameter values were used.
+
+The steering angle output is addressed as a regression problem, so the loss used is 'mean squared error'.
+
 ## Training
+
+Generator: avoids loading entire data set.
+
+### Data Used
+
+Lacking gaming skills to guide the car smoothly around the track, the Udacity provided dataset was used.
+
+### Initial Results
+
+Initially only ran model on 1 epoch to ensure the code was valid.
+Surprisingly, running the resulting model, the car made it past the bridge. 
+(Although it failed to negotiate the left turn after the bridge, and went off the road to the right.)
+
 ### Data Augmentation
+
+Adding data was enough to overcome overfitting, and the trained model successfully guided the car around the track.
+
+### Model Variations
+
+#### L2 Regularization
+Low train and validation loss, but car smashed up against left side of bridge.
+
+#### Dropout
+On input layer.
+Car successful in negotiating track. Doesn't seem better than without dropout layer
 
 ## Overfitting
 Data, dropout, regularization, batch normalization, bears, oh my!
