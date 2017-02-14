@@ -6,6 +6,8 @@
 #
 # Usage: python model.py
 #
+# Diagram of model is output into file 'model.png'
+# Training and validation loss is plotted.
 # Saves resulting model into file 'model.h5'
 #
 
@@ -14,6 +16,7 @@ from keras.layers import Dense, Activation, Dropout, Flatten, Lambda, Convolutio
 from keras.optimizers import SGD, Adam, RMSprop
 from keras.layers.advanced_activations import ELU
 from keras import backend as K
+from keras.regularizers import l2
 
 #
 # Model Definition
@@ -40,11 +43,11 @@ model = Sequential([
 	# resulting range -1.0 to 1.0
 	Lambda(lambda x: (x/127.5) - 1.0, input_shape=(64,64,3)),
 	
-	# layer 1: filters 24, kernel 5x5, stride (subsample) 2x2 
-	Convolution2D(24, 5, 5, border_mode='valid', input_shape=(64, 64, 3), subsample=(2,2)),
-	
 	# Use drop out if there is overfitting
-	# model.add(Dropout( 0.2 )),
+	Dropout( 0.2 ),
+	
+	# layer 1: filters 24, kernel 5x5, stride (subsample) 2x2 
+	Convolution2D(24, 5, 5, border_mode='valid', subsample=(2,2)),
 	
 	# Activation ELU better than ReLU?
 	# (without activation layer, the linear result of previous layer is used. "linear" activation: a(x) = x)
@@ -53,7 +56,7 @@ model = Sequential([
 	ELU(alpha=1.0),
 	
 	# layer 2: filters 36, kernel 5x5, stride (subsample) 2x2, activation ELU
-	Convolution2D(36, 5, 5, border_mode='valid', subsample=(2,2) ),
+	Convolution2D(36, 5, 5, border_mode='valid', subsample=(2,2)),
 	ELU(alpha=1.0),
 	
 	# layer 3: filters 48, kernel 5x5, stride (subsample) 2x2, activation ELU
@@ -95,10 +98,11 @@ print ("Model defined")
 # Model Compilation
 #
 
-# Optimizer: Adam https://arxiv.org/abs/1412.6980v8
+# Optimizer: Adam (adaptive moment estimation) https://arxiv.org/abs/1412.6980v8
+# Adam "computes individual adaptive learning rates for different parameters from estimates of first and second moments of the gradients"
 # Configure for a mean squared error regression problem
-learning_rate = 0.001
-adam = Adam(lr = learning_rate)
+# Use default parameter values
+adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0) 
 model.compile(optimizer = adam, loss = 'mean_squared_error', metrics=['accuracy'])
 
 print ("Model compiled")
@@ -107,20 +111,21 @@ print ("Model compiled")
 # Model Diagram
 #
 # For keras plot to work, need:
-# sudo pip install pydot-ng
-# brew install graphviz
+#   sudo pip install pydot-ng
+#   brew install graphviz
 #
 # generates model diagram in file specified by plot(to_file='')
 from keras.utils.visualize_util import plot
 plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)
 
-print("Model diagram")
+print("Model diagram output to file")
 
 #
 # Model Training
 #
 
-### Start with example from "How to Use Generators"
+### Start with example from course material "How to Use Generators"
+# Use generators to avoid entire data set, load by batch instead.
 import os
 import csv
 
@@ -155,6 +160,10 @@ from scipy.ndimage.interpolation import zoom
 ### Set up generator
 print("Generator setup ...")
 
+#
+# flip=True to flip images
+# left_right=True to use left and right camera images with angle adjustment
+#
 def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right=False, flip=False):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
@@ -171,9 +180,7 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
             angle_index=3
             
             for batch_sample in batch_samples:
-                # name = './IMG/'+batch_sample[0].split('/')[-1]
-                # center_image = cv2.imread(name) 
-                # use PIL instead to read as RGB not cv2 BGR? as drive.py uses PIL
+                # use PIL instead of OpenCV cv2.imread to read as RGB not cv2 BGR. This is consistent with drive.py which uses PIL
                 center_image = PIL.Image.open( images_dir + batch_sample[center_index] )
                 center_angle = float(batch_sample[angle_index])
                 images.append( np.asarray( center_image ) )
@@ -216,24 +223,19 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
             y_train = np.array(angles)
             
             # crop images to remove upper horizontal band above horizon (road) and lower horizontal band that includes the hood of car
+            # results in 64x128
             X_train = X_train[:, 60:124, 0:320, :]
             
             # resize to 64x64
-            # X_resized = [cv2.resize(img,(64, 64), interpolation = cv2.INTER_CUBIC) for img in X]
             #http://stackoverflow.com/questions/40201846/resizing-ndarray-of-images-efficiently
             X_train=zoom(X_train,zoom=(1,1,64./320,1),order=1)
             
             yield sklearn.utils.shuffle(X_train, y_train)
             
-# no left/right, no flip
-# train_generator = generator(train_samples, batch_size=32)
-# validation_generator = generator(validation_samples, batch_size=32)
 
-# flip images
+# Setup generators for valid and train data sets
 train_generator = generator(train_samples, batch_size=128, flip=True, left_right=True)
 validation_generator = generator(validation_samples, batch_size=128, flip=True, left_right=True)
-
-
 
 print("Start training ...")
 
@@ -258,11 +260,7 @@ plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.draw()
 
-# train the model, iterating on the data in batches
-# of 32 samples
-### model.fit(data, labels, nb_epoch=10, batch_size=128)
-
-# Save your trained model architecture as model.h5 using model.save('model.h5').
+# Save trained model architecture as model.h5
 model.save('model.h5')
 
 print('model saved')
