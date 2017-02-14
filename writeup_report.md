@@ -1,12 +1,6 @@
-#**Traffic Sign Recognition** 
-
-##Writeup Template
-
-###You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
+# Behavioral Cloning Project
 
 ---
-
-**Behavrioal Cloning Project**
 
 The goals / steps of this project are the following:
 * Use the simulator to collect data of good driving behavior
@@ -15,6 +9,135 @@ The goals / steps of this project are the following:
 * Test that the model successfully drives around track one without leaving the road
 * Summarize the results with a written report
 
+---
+
+## Preamble
+
+The meaning of the term 'Behavioral Cloning' could be more clearly communicated by replacing it with 'Behavioral Mimicking' or 'Monkey See Monkey Do'.
+
+The goal of a 'Behavioral Cloning' machine learning system is to observe input samples and associated actions
+to learn the desired action for a given input.
+A well trained system can then be applied to similar inputs.
+In this project, the input is images captured from a driving simulator and the action to be mimicked is the steering angle.
+
+This project could have been approached as a classification problem (with enough classes to provide 
+	fine grained response)
+However, it would be better to produce a continuous output value, hence the project is approached as a 'regression' problem.
+
+The referenced Nvidia model is used as the starting point for the deep learning network architecture.
+
+The provided simulator produces images of dimension width x height = 160x320.
+There is a top horizontal band above the road surface that does not provide driving information and can be cropped.
+Also, there is a bottom horizontal band with the car's hood that can be cropped.
+Reducing input size will reduce the number of parameters that need to be trained.
+
+## Architecture
+
+The starting point used for the model architecture is the network described in the Nvidia paper 
+[End to End Learning for Self-Driving Cars](http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf)
+
+The Nvidia model takes input images of dimensional shape (66, 200, 3). Nvidia uses 3 input channels coded in YUV format.
+
+We have observed that there is a top and bottom horizontal band that can be cropped without losing driving information.
+In addition, there is a broad road surface area that doesn't provide much feature information,
+it is the road edge feature information that is relevant.
+It appears that the simulator image can thus be reduced in width without greatly affecting relevant input information.
+With cropping and resizing of width, input images with dimensional shape (64, 64, 3) seems reasonable.
+
+The much smaller input image size affects the resulting architecture:
+
+* remove 1 convolutional layer
+* remove 1 fully connected layer
+
+![Model Architecture](./model.png)
+
+## Training
+### Data Augmentation
+
+## Overfitting
+Data, dropout, regularization, batch normalization, bears, oh my!
+
+## Postamble
+Explore transfer learning models provided by Keras.
+Explore simplest network that would work.
+
+Epoch 1/10
+6428/6428 [==============================] - 57s - loss: 0.4139 - val_loss: 0.0166
+Epoch 2/10
+6428/6428 [==============================] - 49s - loss: 0.0124 - val_loss: 0.0155
+Epoch 3/10
+6428/6428 [==============================] - 55s - loss: 0.0115 - val_loss: 0.0150
+Epoch 4/10
+6428/6428 [==============================] - 51s - loss: 0.0112 - val_loss: 0.0144
+Epoch 5/10
+6428/6428 [==============================] - 48s - loss: 0.0111 - val_loss: 0.0146
+Epoch 6/10
+6428/6428 [==============================] - 59s - loss: 0.0107 - val_loss: 0.0142
+Epoch 7/10
+6428/6428 [==============================] - 51s - loss: 0.0106 - val_loss: 0.0137
+Epoch 8/10
+6428/6428 [==============================] - 51s - loss: 0.0105 - val_loss: 0.0132
+Epoch 9/10
+6428/6428 [==============================] - 50s - loss: 0.0104 - val_loss: 0.0138
+Epoch 10/10
+6428/6428 [==============================] - 56s - loss: 0.0105 - val_loss: 0.0132
+
+Validation loss levels out at epoch 7
+whereas training loss keeps dropping,
+so starting to overfit at epoch 8.
+
+First Iteration
+* 10 epochs on center image
+* test drive results: went through bridge, started wavering, went off road right side into tires.
+
+Second Iteration
+* add left and right camera images to handle situations when car is off center
+* 
+
+Epoch 1/10
+19284/19284 [==============================] - 162s - loss: 3.2441 - acc: 0.1467 - val_loss: 0.0232 - val_acc: 0.1816
+Epoch 2/10
+19284/19284 [==============================] - 151s - loss: 0.0164 - acc: 0.1807 - val_loss: 0.0208 - val_acc: 0.1816
+Epoch 3/10
+19284/19284 [==============================] - 148s - loss: 0.0148 - acc: 0.1807 - val_loss: 0.0190 - val_acc: 0.1818
+Epoch 4/10
+19284/19284 [==============================] - 156s - loss: 0.0139 - acc: 0.1807 - val_loss: 0.0165 - val_acc: 0.1818
+Epoch 5/10
+19284/19284 [==============================] - 154s - loss: 0.0133 - acc: 0.1807 - val_loss: 0.0154 - val_acc: 0.1818
+Epoch 6/10
+19284/19284 [==============================] - 148s - loss: 0.0129 - acc: 0.1807 - val_loss: 0.0150 - val_acc: 0.1818
+Epoch 7/10
+19284/19284 [==============================] - 148s - loss: 0.0126 - acc: 0.1807 - val_loss: 0.0151 - val_acc: 0.1818
+Epoch 8/10
+19284/19284 [==============================] - 151s - loss: 0.0124 - acc: 0.1807 - val_loss: 0.0154 - val_acc: 0.1818
+Epoch 9/10
+19284/19284 [==============================] - 151s - loss: 0.0121 - acc: 0.1807 - val_loss: 0.0159 - val_acc: 0.1818
+Epoch 10/10
+19284/19284 [==============================] - 150s - loss: 0.0119 - acc: 0.1807 - val_loss: 0.0160 - val_acc: 0.1818
+
+steering left right image correction
+0.1
+0.2
+0.3 off to left before bridge
+
+Multiple Iterations later
+* add flipped images
+* add left and right images (angle adjustment 0.15) ( < 0.1 is not enough, >0.2 overcorrects)
+* batch size 128
+* learning rate 0.001
+* epochs 6
+
+Iteration: augmented with flipped left/right, did not seem to make a diff in driving
+
+Iteration: L2 regularization conv and dense layers W_regularizer=l2(0.01)
+* loss converges to low number
+* stuck on left side bridge
+
+Iteration: dropout
+
+
+
+---
 
 [//]: # (Image References)
 
