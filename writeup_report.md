@@ -34,7 +34,8 @@ The model.py file contains the code for training and saving the convolution neur
 
 ## Preamble
 
-The meaning of the term 'Behavioral Cloning' could be more clearly communicated by replacing it with 'Behavioral Mimicking' or 'Monkey See Monkey Do'.
+The meaning of the term 'Behavioral Cloning' could be more clearly communicated by replacing it with 'Behavioral Mimicking' 
+or '**Monkey See Monkey Do**'.
 
 The goal of a 'Behavioral Cloning' machine learning system is to observe input samples and associated actions
 to learn the desired action for a given input.
@@ -42,12 +43,12 @@ A well trained system can then be applied to similar inputs.
 In this project, the input is images captured from a driving simulator and the action to be mimicked is the steering angle.
 
 This project could have been approached as a classification problem (with enough classes to provide 
-	fine grained response)
-However, it would be better to produce a continuous output value, hence the project is approached as a 'regression' problem.
+	fine grained response).
+However, it would be better to produce a continuous output value, hence the project is approached as a **regression** problem.
 
-The referenced Nvidia model is used as the starting point for the deep learning network architecture.
+The referenced Nvidia DAVE2 model is used as the starting point for the deep learning network architecture.
 
-The provided simulator produces images of dimension width x height = 160x320.
+The provided simulator produces images of dimension *width* x *height* = 160x320.
 There is a top horizontal band above the road surface that does not provide driving information and can be cropped.
 Also, there is a bottom horizontal band with the car's hood that can be cropped.
 Reducing input size will reduce the number of parameters that need to be trained.
@@ -142,7 +143,7 @@ The steering angle output is addressed as a regression problem, so the loss used
 
 ### Data Used
 
-Lacking gaming skills to guide the car smoothly around the track, the Udacity provided dataset was used.
+Lacking gaming skills to guide the car smoothly around the track, the Udacity provided dataset was used for this project.
 
 This data is split into training and validation datasets using as split ratio of 4-to-1 train vs validation.
 Or 80% training, 20% validation.
@@ -151,6 +152,15 @@ The validation set is used to evaluate the trained model and
 helped determine if the model was over or under fitting.
 
 The data samples is shuffled during training.
+
+An inspection of the steering angles distribution shows that about half of the samples have zero of near zero values.  
+Steering angles histogram:
+
+![angles histogram](./angles_histogram.png  "angles")
+
+An experiment to even out the distribution by reducing the zero angle samples by half did not produce good results
+when driving with the simulator.
+The zero angle samples contribute towards the trained system.
 
 ### System limitations
 
@@ -194,7 +204,7 @@ The initial dataset can be transformed in various ways to add to the training da
 Flipping images and the corresponding steering angle
 evens out the augmented dataset so that there is not a bias towards left and right turns.
 
-**Example** (original on left, flipped on right):
+*Example* (original on left, flipped on right):
 
 ![original](./examples/right_2016_12_01_13_34_37_348.jpg "original") ![flipped](./examples/right_2016_12_01_13_34_37_348_flipped.jpg "flipped") 
 
@@ -204,7 +214,7 @@ The steering angle for the original image is 0.5114809 which is flipped to -0.51
 The simulator captures images from 3 cameras: left, center, right. The accompanying steering angle corresponds to the center camera.
 The left and right camera views are captured from a viewpoint roughly 3 feet to either side of center.
 
-**Example** (left, center, right):
+*Example* (left, center, right):
 
 ![left](./examples/left_2016_12_01_13_30_48_287.jpg "left") ![center](./examples/center_2016_12_01_13_30_48_287.jpg "center") ![right](./examples/right_2016_12_01_13_30_48_287.jpg "right")
 
@@ -244,7 +254,7 @@ Further investigation on root cause is needed.
 
 #### Dropout
 Dropout is tried after initial input layer and after the first convolutional layer.
-Using the trained model, the car wassuccessful in negotiating track,
+Using the trained model, the car was successful in negotiating track,
 but the behavior did not seem better than without dropout layer
 
 #### Maxpool size 2x2, stride 2x2
@@ -255,7 +265,7 @@ the first convolutional stride was reduced from 2,2 to 1,1.
 The resulting trained model allowed the car to make it around the course, but car weaved around road some.
 
 ### Dropout, regularization, batch normalization, bears, oh my!
-There are many options each with it's own set of dimensions for modifying the architecture.
+There are many options for ANN design, each with it's own set of dimensions for modifying the architecture.
 Clearly there are too many options to experiment with in one project.
 The best approach is to use proven prior work as starting points.
 The Nvidia DAVE2 model is used is this project, there are many more.
@@ -266,8 +276,9 @@ During the trials, the loss was generally seen to level out after the 5th or 6th
 
 ## PostAmble
 
-A successful model found in this project was the initial architecture based on the Nvidia DAVE2 model.
-It used an augmented data set created from the Udacity provided data set.
+A successful model found in this project is based on the Nvidia DAVE2 model
+simplified down for a smaller input image size.  
+It uses an augmented data set created from the Udacity provided data set.
 
 The car was driven on the simulator for over half an hour,
 the car does not end up smoking on a pile of tires.
