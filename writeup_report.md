@@ -189,12 +189,24 @@ The initial dataset can be transformed in various ways to add to the training da
 1. Flip the images (and the steering angle)
 2. Left and Right Camera Views as Corrections.
 
+#### Flipping Images
+
+Flipping images and the corresponding steering angle
+evens out the augmented dataset so that there is not a bias towards left and right turns.
+
+**Example** (original on left, flipped on right):
+
+![original](./examples/right_2016_12_01_13_34_37_348.jpg "original") ![flipped](./examples/right_2016_12_01_13_34_37_348_flipped.jpg "flipped") 
+
+The steering angle for the original image is 0.5114809 which is flipped to -0.5114809 for the flipped image.
+
 #### Left and Right Camera Images Usage
 The simulator captures images from 3 cameras: left, center, right. The accompanying steering angle corresponds to the center camera.
 The left and right camera views are captured from a viewpoint roughly 3 feet to either side of center.
 
-Example:
-![left](./examples/left_2016_12_01_13_30_48_287.jpg "left") ![center](./examples/center_2016_12_01_13_30_48_287.jpg "center") ![center](./examples/right_2016_12_01_13_30_48_287.jpg "right")
+**Example** (left, center, right):
+
+![left](./examples/left_2016_12_01_13_30_48_287.jpg "left") ![center](./examples/center_2016_12_01_13_30_48_287.jpg "center") ![right](./examples/right_2016_12_01_13_30_48_287.jpg "right")
 
 The center image has steering angle 0.
 The left image can be seen as a car that has drifted to the left, so it needs to be steered back towards center with: `left_angle = center_angle + correction`
@@ -204,6 +216,8 @@ Similarly in opposite direction for the right image.
 The steering angle range is -1 to 1, corresponding to -25 to 25 degrees.
 The amount of correction is up for experimentation, too little and car drifts off road, too much and the car over-corrects and swerves off road. 
 The correction settled on is 0.2
+
+The left and right camera images can also be flipped.
 
 #### Data size
 Using these 2 techniques together, the resulting sample size is 6 times original size.
