@@ -71,11 +71,16 @@ The steering angle output is addressed as a regression problem, so the loss used
 
 ## Training
 
-Generator: avoids loading entire data set.
-
 ### Data Used
 
 Lacking gaming skills to guide the car smoothly around the track, the Udacity provided dataset was used.
+
+This data is split into training and validation datasets.
+
+### System limitations
+
+Generators are used to load batches of data (image files) from disk,
+this avoids loading entire datasets into memory, likely exceeding main memory limits.
 
 ### Initial Results
 
@@ -83,33 +88,91 @@ Initially only ran model on 1 epoch to ensure the code was valid.
 Surprisingly, running the resulting model, the car made it past the bridge. 
 (Although it failed to negotiate the left turn after the bridge, and went off the road to the right.)
 
-Trained 10 epochs, train loss went down, validation loss increasing slightly => overfitting.
-Approaches: more data, dropout, pooling, etc.
+Once the code is confirmed to successfully execute, 
+the model was trained for 10 epochs.
+The results show that with each epoch, the training loss went down, whereas the validation loss has a slow increasing trend.
+The losses are plotted in the accompanying figure, 
+![Training and Validation Loss](./figure_model_loss.png)
+
+This indicates that the model is **overfitted**.
+The approaches for **addressing overfitting** include:
+
+1. use more training data
+2. various options in modifying the model, including dropout, pooling, weights regularization.
+
+Various data scientists including Andrew Ng have stated that one key to making deep learning techniques work is enough data.
+[Datasets Over Algorithms](https://www.edge.org/response-detail/26587)
+
+So to address overfitting, the first inclination is to add to the training dataset.
 
 ### Data Augmentation
 
-Adding data was enough to overcome overfitting, and the trained model successfully guided the car around the track.
+The initial dataset can be transformed in various ways to add to the training data.
+
+1. Flip the images (and the steering angle)
+2. The simulator captures images from 3 cameras: left, center, right. The accompanying steering angle corresponds to the center camera.
+   The left and right camera views are captured from a viewpoint roughly 3 feet to either side of center.
+   The left camera view point can be considered to be the view point if the car has drifted 3 feet to the left.
+   The desired steering angle for the left view point would be to correct towards the center.
+   So the left camera steering angle is calculated by `center angle + correction angle`.
+   The amount of correction is up for experimentation, too little and car drifts off road, too much and the car over-corrects and swerves off road.
+
+Using these 2 techniques together, the resulting sample size is 6 times original size.
+
+With this data set, the training and validation loss decrease over subsequent epochs as seen in this plot: ![Training and Validation Loss](./figure_model_loss_augment.png)
+
+As was eventually seen after various trials,
+adding data was enough to overcome overfitting, and the trained model successfully guided the car around the track.
 
 ### Model Variations
 
+Various architectural options was used to modify the initial model to investigate possible improvements.
+These trials are summarized in this section.
+
 #### L2 Regularization
-Low train and validation loss, but car smashed up against left side of bridge.
+L2 regularization is used to adjust weights to a more even range, no high variance in weights and can be used to address overfitting.
+The resulting training and validation loss look promising, the losses drop and converge.
+This is plotted here: ![Training and Validation Loss](./figure_model_loss_augment_l2.png)
+
+However, with L2 regularization, the car smashed up against left side of bridge.
+Further investigation on root cause is needed.
 
 #### Dropout
-On input layer.
-Car successful in negotiating track. Doesn't seem better than without dropout layer
+Dropout is tried after initial input layer and after the first convolutional layer.
+Using the trained model, the car wassuccessful in negotiating track,
+but the behavior did not seem better than without dropout layer
 
 #### Maxpool size 2x2, stride 2x2
-after 1st Convolutional 2D layer
-reduced conv layer stride from 2,2 to 1,1 to adjust of maxpool dimension reduction
-made it around the course, but car weaved around road
+Max-pooling was tried after the 1st Convolutional 2D layer.
+Because of the dimensionality reduction of max-pooling,
+the first convolutional stride was reduced from 2,2 to 1,1.
 
-## Overfitting
-Data, dropout, regularization, batch normalization, bears, oh my!
+The resulting trained model allowed the car to make it around the course, but car weaved around road some.
+
+### Dropout, regularization, batch normalization, bears, oh my!
+There are many options each with it's own set of dimensions for modifying the architecture.
+Clearly there are too many options to experiment with in one project.
+The best approach is to use proven prior work as starting points.
+The Nvidia DAVE2 model is used is this project, there are many more.
 
 ## Postamble
-Explore transfer learning models provided by Keras.
-Explore simplest network that would work.
+
+A successful model found in this project was the initial architecture based on the Nvidia DAVE2 model.
+It used an augmented data set created from the Udacity provided data set.
+
+The car was driven on the simulator for over half an hour,
+the car does not end up smoking on a pile of tires.
+
+This architecture does not have pooling or dropout layers.
+This empirical finding is congruous with the Nvidia DAVE2 model.
+
+### Futures
+
+There are many directions to explore including:
+
+1. Convert RGB to YUV. This separates color from whether the scene is light or dark.
+2. Explore other models including transfer learning models provided by Keras.
+3. Explore what is simplest network that would work.
 
 Epoch 1/10
 6428/6428 [==============================] - 57s - loss: 0.4139 - val_loss: 0.0166
