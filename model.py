@@ -186,7 +186,7 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
             
             images = []
             angles = []
-            angle_adjust = 0.15 # amount of correction for left and right cameras
+            angle_adjust = 0.2 # amount of correction for left and right cameras
             center_index = 0
             left_index=1
             right_index=2
@@ -255,7 +255,7 @@ print("Start training ...")
 
 # augmentation_factor to add augmented images including flipped and left/right images
 augmentation_factor = 6
-epochs = 8
+epochs = 6
 
 history = model.fit_generator(train_generator, 
     samples_per_epoch=len(train_samples)*augmentation_factor, 
