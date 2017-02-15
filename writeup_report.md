@@ -187,16 +187,29 @@ So to address overfitting, the first inclination is to add to the training datas
 The initial dataset can be transformed in various ways to add to the training data.
 
 1. Flip the images (and the steering angle)
-2. The simulator captures images from 3 cameras: left, center, right. The accompanying steering angle corresponds to the center camera.
-   The left and right camera views are captured from a viewpoint roughly 3 feet to either side of center.
-   The left camera view point can be considered to be the view point if the car has drifted 3 feet to the left.
-   The desired steering angle for the left view point would be to correct towards the center.
-   So the left camera steering angle is calculated by `center angle + correction angle`.
-   The amount of correction is up for experimentation, too little and car drifts off road, too much and the car over-corrects and swerves off road.
+2. Left and Right Camera Views as Corrections.
 
+#### Left and Right Camera Images Usage
+The simulator captures images from 3 cameras: left, center, right. The accompanying steering angle corresponds to the center camera.
+The left and right camera views are captured from a viewpoint roughly 3 feet to either side of center.
+
+Example:
+![left](./examples/left_2016_12_01_13_30_48_287.jpg "left") ![center](./examples/center_2016_12_01_13_30_48_287.jpg "center") ![center](./examples/right_2016_12_01_13_30_48_287.jpg "right")
+
+The center image has steering angle 0.
+The left image can be seen as a car that has drifted to the left, so it needs to be steered back towards center with: `left_angle = center_angle + correction`
+
+Similarly in opposite direction for the right image.
+
+The steering angle range is -1 to 1, corresponding to -25 to 25 degrees.
+The amount of correction is up for experimentation, too little and car drifts off road, too much and the car over-corrects and swerves off road. 
+The correction settled on is 0.2
+
+#### Data size
 Using these 2 techniques together, the resulting sample size is 6 times original size.
 A total of 38568 samples.
 
+#### Improved performance with Data
 With this data set, the training and validation loss decrease over subsequent epochs as seen in this plot: ![Training and Validation Loss](./figure_model_loss_augment.png)
 
 As was eventually seen after various trials,
@@ -247,6 +260,8 @@ the car does not end up smoking on a pile of tires.
 
 This architecture does not have pooling or dropout layers.
 This empirical finding is congruous with the Nvidia DAVE2 model.
+
+The project results shows a simplified Nvidia model can be used to address a simplified environment of the simulator.
 
 ### Futures
 
