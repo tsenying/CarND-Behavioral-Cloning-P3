@@ -83,6 +83,9 @@ Initially only ran model on 1 epoch to ensure the code was valid.
 Surprisingly, running the resulting model, the car made it past the bridge. 
 (Although it failed to negotiate the left turn after the bridge, and went off the road to the right.)
 
+Trained 10 epochs, train loss went down, validation loss increasing slightly => overfitting.
+Approaches: more data, dropout, pooling, etc.
+
 ### Data Augmentation
 
 Adding data was enough to overcome overfitting, and the trained model successfully guided the car around the track.
@@ -95,6 +98,11 @@ Low train and validation loss, but car smashed up against left side of bridge.
 #### Dropout
 On input layer.
 Car successful in negotiating track. Doesn't seem better than without dropout layer
+
+#### Maxpool size 2x2, stride 2x2
+after 1st Convolutional 2D layer
+reduced conv layer stride from 2,2 to 1,1 to adjust of maxpool dimension reduction
+made it around the course, but car weaved around road
 
 ## Overfitting
 Data, dropout, regularization, batch normalization, bears, oh my!

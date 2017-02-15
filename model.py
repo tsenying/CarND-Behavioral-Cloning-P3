@@ -13,6 +13,7 @@
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Lambda, Convolution2D, Cropping2D
+from keras.layers.pooling import MaxPooling2D
 from keras.optimizers import SGD, Adam, RMSprop
 from keras.layers.advanced_activations import ELU
 from keras import backend as K
@@ -43,17 +44,22 @@ model = Sequential([
 	# resulting range -1.0 to 1.0
 	Lambda(lambda x: (x/127.5) - 1.0, input_shape=(64,64,3)),
 	
-	# Use drop out if there is overfitting
-	Dropout( 0.2 ),
-	
 	# layer 1: filters 24, kernel 5x5, stride (subsample) 2x2 
 	Convolution2D(24, 5, 5, border_mode='valid', subsample=(2,2)),
+	
+	# Dropout layer here did not improve driving performance
+	# Use drop out if there is overfitting
+	## Dropout( 0.2 ),
 	
 	# Activation ELU better than ReLU?
 	# (without activation layer, the linear result of previous layer is used. "linear" activation: a(x) = x)
 	# Advanced activation layers are not activation functions. https://github.com/fchollet/keras/issues/2272
 	# model.add(LeakyReLU(params['a'])) not model.add(Activation(LeakyReLU(params['a'])))
 	ELU(alpha=1.0),
+	
+	# Maxpool layer here did not improve driving performance
+	# stride size same as pool size
+	## MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'),
 	
 	# layer 2: filters 36, kernel 5x5, stride (subsample) 2x2, activation ELU
 	Convolution2D(36, 5, 5, border_mode='valid', subsample=(2,2)),
@@ -62,14 +68,15 @@ model = Sequential([
 	# layer 3: filters 48, kernel 5x5, stride (subsample) 2x2, activation ELU
 	Convolution2D(48, 5, 5, border_mode='valid', subsample=(2,2)),
 	ELU(alpha=1.0),
-
+	
 	# layer 4: filters 64, kernel 3x3, activation ELU
 	Convolution2D(64, 3, 3, border_mode='valid'),
 	ELU(alpha=1.0),
 	
 	# layer 5: filters 64, kernel 3x3, activation ELU
 	# NOTE: this layer reduced dimensions down to 1x1, didn't seem necessary
-	# Convolution2D(64, 3, 3, border_mode='valid', activation=ELU(alpha=1.0)),
+    # Convolution2D(64, 3, 3, border_mode='valid'),
+    # ELU(alpha=1.0),
 	
 	# Flatten
 	#   output dim is 64
@@ -78,12 +85,12 @@ model = Sequential([
 	# Fully-connected layer 1
 	# NOTE: having a fully connected layer > 64 would expand dimensions not reduce it as is usual with Convolutional Networks
 	#   so this layer was removed
-	# Dense(100),
-	# ELU(alpha=1.0),
+    # Dense(100),
+    # ELU(alpha=1.0),
 	
 	# Fully-connected layer 2
-	Dense(50),
-	ELU(alpha=1.0),
+    Dense(50),
+    ELU(alpha=1.0),
 	
 	# Fully-connected layer 3
 	Dense(10),
@@ -140,6 +147,12 @@ samples.pop(0)
 
 print("Samples CSV loaded len={}".format(len(samples)))
 
+# filter out near 0 steering angle samples
+# ( Don't filter zeros, car went off road. )
+# import random
+# filtered_samples = [s for s in samples if not ( (-0.001 < float(s[3])  < 0.001) and (random.randint(1,5) != 1) ) ]
+# print("Samples CSV some near zero angles filtered len={}".format(len(filtered_samples)))
+
 # shuffle and split into train and validation sets
 from sklearn.model_selection import train_test_split
 train_samples, validation_samples = train_test_split(samples, test_size=0.2, random_state=88)
@@ -183,6 +196,7 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
                 # use PIL instead of OpenCV cv2.imread to read as RGB not cv2 BGR. This is consistent with drive.py which uses PIL
                 center_image = PIL.Image.open( images_dir + batch_sample[center_index] )
                 center_angle = float(batch_sample[angle_index])
+                    
                 images.append( np.asarray( center_image ) )
                 angles.append(center_angle)
                 
