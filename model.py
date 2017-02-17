@@ -255,7 +255,7 @@ print("Start training ...")
 
 # augmentation_factor to add augmented images including flipped and left/right images
 augmentation_factor = 6
-epochs = 6
+epochs = 8
 
 history = model.fit_generator(train_generator, 
     samples_per_epoch=len(train_samples)*augmentation_factor, 
