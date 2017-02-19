@@ -162,6 +162,17 @@ An experiment to even out the distribution by reducing the zero angle samples by
 when driving with the simulator.
 The zero angle samples contribute towards the trained system.
 
+#### Image Color Space
+The Nvidia model converts RGB images to the YUV colorspace.
+Color spaces, such as YUV and HSV, separate image brightness from color information.
+Using YUV should be advantageous where the image frames vary in brightness from effects such as time of day
+or mountain shadows.
+
+Both YUV and HSV was tried for track 1 of the simulator.
+YUV did not seem to affect the results much, HSV may have produced a smoother response from a non-quantitative eye-balling perspective.
+The outcome of using other colorspaces did not affect track 1 results significantly may be because
+track 1 has even image brightness for the entire track.
+
 ### System limitations
 
 Generators are used to load batches of data (image files) from disk,
@@ -295,3 +306,10 @@ There are many directions to explore including:
 1. Convert RGB to YUV. This separates color from whether the scene is light or dark.
 2. Explore other models including transfer learning models provided by Keras.
 3. Explore what is simplest network that would work.
+
+### Dependence on platform characteristics
+
+The trained model was tried on an 8 year old Macbook Pro.
+The car did not make it to the bridge before veering off track.
+The simulator in conjunction with the model's feedback loop seem to depend on performance characteristics of execution platform.
+
