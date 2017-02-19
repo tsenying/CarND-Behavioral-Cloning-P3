@@ -11,6 +11,36 @@
 # Saves resulting model into file 'model.h5'
 #
 
+# process command line args
+import sys, getopt
+def process_args(argv):
+    imagesdir = ''
+    modelfile = ''
+    epochs = 6
+    try:
+        opts, args = getopt.getopt(argv,"hm:i:e:",["mfile=","idir=","epochs="])
+    except getopt.GetoptError:
+        print( 'test.py -m <modelfile> -i <imagesdir>' )
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('test.py -m <modelfile> -i <imagesdir>' ) 
+            sys.exit()
+        elif opt in ("-i", "--idir"):
+            imagesdir = arg
+        elif opt in ("-m", "--mfile"):
+            modelfile = arg
+        elif opt in ("-e", "--epochs"):
+            epochs = int(arg)
+    return modelfile, imagesdir, epochs
+   
+model_file, images_dir, epochs = process_args(sys.argv[1:])
+print ('Model file is:', model_file)
+print ('Images dir is:', images_dir)
+print ('Epochs is:', epochs)
+
+
+# Keras imports
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Lambda, Convolution2D, Cropping2D
 from keras.layers.pooling import MaxPooling2D
@@ -109,10 +139,20 @@ print ("Model defined")
 # Adam "computes individual adaptive learning rates for different parameters from estimates of first and second moments of the gradients"
 # Configure for a mean squared error regression problem
 # Use default parameter values
-adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0) 
-model.compile(optimizer = adam, loss = 'mean_squared_error', metrics=['accuracy'])
 
-print ("Model compiled")
+# if model file is input, load and use previously saved model
+# else compile new model
+if ( len(model_file) == 0 ):
+    adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0) 
+    model.compile(optimizer = adam, loss = 'mean_squared_error', metrics=['accuracy'])
+    print ("Model compiled")
+else:
+    # returns a compiled model
+    # identical to the previous one
+    # NOTE: either reload previous model, or compile model from scratch, not both
+    from keras.models import load_model
+    model = load_model(model_file)
+    print ("Previous model loaded:", model_file)
 
 #
 # Model Diagram
@@ -137,7 +177,7 @@ import os
 import csv
 
 samples = []
-with open('../ud-sim-data/driving_log.csv') as csvfile:
+with open( images_dir + '/driving_log.csv') as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
         samples.append(line)
@@ -170,14 +210,28 @@ import sklearn
 import PIL
 from scipy.ndimage.interpolation import zoom
 
+# image preprocessing function
+# - convert to numpy array
+# - convert colorspace to YUV
+def image_preprocess(image):
+    return cv2.cvtColor( np.asarray( image ), cv2.COLOR_BGR2HSV)
+
 ### Set up generator
 print("Generator setup ...")
 
+def image_load(images_dir, image_file):
+    image_file = image_file.strip()
+    if ( image_file[0] == '/' ):
+        image_path = image_file
+    else:
+        image_path = images_dir + '/' + image_file
+    return PIL.Image.open( image_path )
+    
 #
 # flip=True to flip images
 # left_right=True to use left and right camera images with angle adjustment
 #
-def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right=False, flip=False):
+def generator(samples, batch_size=32, images_dir = images_dir, left_right=False, flip=False):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
@@ -194,43 +248,44 @@ def generator(samples, batch_size=32, images_dir = '../ud-sim-data/', left_right
             
             for batch_sample in batch_samples:
                 # use PIL instead of OpenCV cv2.imread to read as RGB not cv2 BGR. This is consistent with drive.py which uses PIL
-                center_image = PIL.Image.open( images_dir + batch_sample[center_index] )
+                
+                center_image = image_load( images_dir, batch_sample[center_index] )
                 center_angle = float(batch_sample[angle_index])
                     
-                images.append( np.asarray( center_image ) )
+                images.append( image_preprocess( center_image ) )
                 angles.append(center_angle)
                 
                 # flip center image vertically
                 if flip:
                     image_flipped = np.fliplr(center_image)
                     angle_flipped = -center_angle
-                    images.append( np.asarray( image_flipped ) )
+                    images.append( image_preprocess( image_flipped ) )
                     angles.append( angle_flipped )      
                               
                 # add in left and right images
                 if left_right:
                     # left image, adjust angle to center
-                    left_image = PIL.Image.open( images_dir + batch_sample[ left_index ].strip() )
+                    left_image = image_load( images_dir, batch_sample[ left_index ] )
                     left_angle = float(batch_sample[angle_index]) + angle_adjust # if car on left side, want to go more right
-                    images.append( np.asarray( left_image ) )
+                    images.append( image_preprocess( left_image ) )
                     angles.append( left_angle )
                     
                     # right image, adjust angle to center
-                    right_image = PIL.Image.open( images_dir + batch_sample[ right_index ].strip() )
+                    right_image = image_load( images_dir, batch_sample[ right_index ] )
                     right_angle = float(batch_sample[angle_index]) - angle_adjust # if car on right side, want to go more left
-                    images.append( np.asarray( right_image ) )
+                    images.append( image_preprocess( right_image ) )
                     angles.append( right_angle )
                     
                     # flip left and right images
                     if flip:
                         image_flipped = np.fliplr(left_image)
                         angle_flipped = -left_angle
-                        images.append( np.asarray( image_flipped ) )
+                        images.append( image_preprocess( image_flipped ) )
                         angles.append( angle_flipped )
                         
                         image_flipped = np.fliplr(right_image)
                         angle_flipped = -right_angle
-                        images.append( np.asarray( image_flipped ) )
+                        images.append( image_preprocess( image_flipped ) )
                         angles.append( angle_flipped )
                 
             X_train = np.array(images)
@@ -255,7 +310,6 @@ print("Start training ...")
 
 # augmentation_factor to add augmented images including flipped and left/right images
 augmentation_factor = 6
-epochs = 8
 
 history = model.fit_generator(train_generator, 
     samples_per_epoch=len(train_samples)*augmentation_factor, 
