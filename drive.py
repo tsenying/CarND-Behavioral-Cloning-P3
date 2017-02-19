@@ -11,6 +11,7 @@ import eventlet.wsgi
 from PIL import Image
 from flask import Flask
 from io import BytesIO
+import cv2
 
 from keras.models import load_model
 
@@ -18,8 +19,7 @@ sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
-
-
+    
 @sio.on('telemetry')
 def telemetry(sid, data):
     if data:
@@ -34,13 +34,14 @@ def telemetry(sid, data):
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         
         # crop 
-        #image = image[:, 60:124, 0:320, :]
-        image = image.crop((0, 60, 320, 124))
+        image_munge = image.crop((0, 60, 320, 124))
 		
         # resize to 64x64
-        image = image.resize( (64, 64), resample=0)
+        image_munge = image_munge.resize( (64, 64), resample=0)
+        
+        # - convert colorspace to YUV to correspond with model
+        image_array = cv2.cvtColor( np.asarray(image_munge), cv2.COLOR_BGR2HSV)
 		
-        image_array = np.asarray(image)
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
         throttle = 0.2
         print(steering_angle, throttle)
