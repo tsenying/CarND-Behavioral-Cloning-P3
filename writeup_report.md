@@ -299,6 +299,9 @@ This empirical finding is congruous with the Nvidia DAVE2 model.
 
 The project results shows a simplified Nvidia model can be used to address a simplified environment of the simulator.
 
+A run around track 1 in captured in video below:
+<iframe width="560" height="315" src="https://www.youtube.com/embed/qGQ37jyovGg" frameborder="0" allowfullscreen></iframe>
+
 ### Futures
 
 There are many directions to explore including:
@@ -309,7 +312,7 @@ There are many directions to explore including:
 
 ### Dependence on platform characteristics
 
-The trained model was tried on an 8 year old Macbook Pro.
+The trained model was also tried on another platform, an 8 year old Macbook Pro.
 The car did not make it to the bridge before veering off track.
 The simulator in conjunction with the model's feedback loop seem to depend on performance characteristics of execution platform.
 
