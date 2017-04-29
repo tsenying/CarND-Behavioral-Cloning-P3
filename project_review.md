@@ -28,8 +28,8 @@ Awesome comments throughout all project!
 - (+)multiple 2D convolution layers are used
 - (+)nonlinearity applied using ELU.
   Here is a good article about it if you are interested:
-  https://arxiv.org/pdf/1511.07289v1.pdf
-  https://arxiv.org/pdf/1605.09332v3.pdf
+  https://arxiv.org/pdf/1511.07289v1.pdf  
+  https://arxiv.org/pdf/1605.09332v3.pdf  
 - (+)data is normalized
 
 As an enhancement you can also normalize layers:  
